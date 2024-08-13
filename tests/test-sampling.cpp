@@ -9,6 +9,9 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#include <random>
+#include <numeric>
+#include <iostream>
 
 static void dump(const llama_token_data_array * candidates) {
     for (size_t i = 0; i < candidates->size; i++) {
@@ -230,8 +233,46 @@ static void test_sampler_queue(
            samplers_sequence.c_str(), n_vocab, top_k, top_p, min_p);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
     ggml_time_init();
+
+    const int64_t t_start_sample_us = ggml_time_us();
+
+    // size_t large_vocab_size = 100;
+    
+    // if (argc > 1) {
+    //     char *endptr;
+    //     long long arg = std::strtoll(argv[1], &endptr, 10);
+
+    //     if (*endptr == '\0' && arg >= 0) {
+    //         large_vocab_size = static_cast<size_t>(arg);
+    //     } else {
+    //         std::cerr << "Invalid argument for large_vocab_size" << std::endl;
+    //         return 1;
+    //     }
+    // }
+    
+    // std::vector<float> large_probs(large_vocab_size);
+    // std::vector<float> large_expected_probs(801);
+ 
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // std::uniform_real_distribution<> dis(0.0, 1.0);
+ 
+    // float sum = 0.0f;
+    // for (size_t i = 0; i < large_vocab_size; ++i) {
+    //     large_probs[i] = dis(gen);
+    //     sum += large_probs[i];
+    // }
+ 
+    // for (size_t i = 0; i < large_vocab_size; ++i) {
+    //     large_probs[i] /= sum;
+    // }
+ 
+    // for(int i = 0; i < 1000000; i++)
+    // {
+    //     test_top_p(large_probs, large_expected_probs, 0.8f);
+    // }
 
     test_top_k({0.1f, 0.2f, 0.3f, 0.4f}, {0.4f}, 1);
     test_top_k({0.1f, 0.2f, 0.3f, 0.4f}, {0.4f, 0.3f, 0.2f}, 3);
@@ -296,6 +337,7 @@ int main(void) {
     test_sampler_queue(10000, "mpk", 100, 0.8f, 0.1f);
 
     printf("OK\n");
+    printf("%lld", ggml_time_us() - t_start_sample_us);
 
     return 0;
 }
