@@ -23,7 +23,7 @@ static void llama_log_softmax(float * array, size_t size) {
 
 void llama_set_rng_seed_impl(struct llama_sampling * smpl, uint32_t seed) {
     if (seed == LLAMA_DEFAULT_SEED) {
-        seed = time(NULL);
+        seed = static_cast<uint32_t>(time(NULL));
     }
 
     smpl->rng.seed(seed);
@@ -67,7 +67,7 @@ void llama_sample_top_k_impl(struct llama_sampling * smpl, llama_token_data_arra
     const int64_t t_start_sample_us = ggml_time_us();
 
     if (k <= 0) {
-        k = candidates->size;
+        k = static_cast<int32_t>(candidates->size);
     }
 
     k = std::max(k, (int) min_keep);
@@ -402,11 +402,11 @@ void llama_sample_entropy_impl(struct llama_sampling * smpl, llama_token_data_ar
     double cum_sum_double = 0.0;
     for (size_t i = 0; i < candidates->size; ++i) {
         double p = exp(candidates->data[i].logit - max_l_double);
-        candidates->data[i].p = p; // Store the scaled probability
+        candidates->data[i].p = static_cast<float>(p); // Store the scaled probability
         cum_sum_double += p;
     }
     for (size_t i = 0; i < candidates->size; ++i) {
-        candidates->data[i].p /= cum_sum_double; // Re-normalize the probabilities
+        candidates->data[i].p /= static_cast<float>(cum_sum_double); // Re-normalize the probabilities
     }
 
 #ifdef DEBUG
@@ -507,7 +507,7 @@ void llama_sample_apply_guidance_impl(
 llama_token llama_sample_token_mirostat_impl(struct llama_sampling * smpl, llama_token_data_array * candidates, float tau, float eta, int32_t m, float * mu) {
     GGML_ASSERT(smpl);
 
-    const int32_t n_vocab = float(smpl->n_vocab);
+    const int32_t n_vocab = smpl->n_vocab;
 
     int64_t t_start_sample_us = ggml_time_us();
 
@@ -527,7 +527,7 @@ llama_token llama_sample_token_mirostat_impl(struct llama_sampling * smpl, llama
 
     // Compute k from the estimated s_hat and target surprise value
     float epsilon_hat = s_hat - 1;
-    float k = powf((epsilon_hat * powf(2, *mu)) / (1 - powf(n_vocab, -epsilon_hat)), 1 / s_hat);
+    float k = powf((epsilon_hat * powf(2, *mu)) / (1 - powf(static_cast<float>(n_vocab), -epsilon_hat)), 1 / s_hat);
 
     // Sample the next word X using top-k sampling
     llama_sample_top_k_impl((struct llama_sampling *) nullptr, candidates, int(k), 1);

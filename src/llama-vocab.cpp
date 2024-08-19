@@ -135,7 +135,7 @@ static uint8_t llama_token_to_byte(const llama_vocab & vocab, llama_token id) {
         case LLAMA_VOCAB_TYPE_SPM:
         case LLAMA_VOCAB_TYPE_UGM: {
             auto buf = token_data.text.substr(3, 2);
-            return strtol(buf.c_str(), NULL, 16);
+            return static_cast<uint8_t>(strtol(buf.c_str(), NULL, 16));
         }
         case LLAMA_VOCAB_TYPE_BPE: {
             GGML_ABORT("fatal error");
@@ -207,7 +207,7 @@ struct llm_tokenizer_spm {
         }
 
         // seed the work queue with all possible 2-character tokens.
-        for (size_t i = 1; i < symbols.size(); ++i) {
+        for (size_t i = 1; i < static_cast<int>(symbols.size()); ++i) {
             try_add_bigram(i - 1, i);
         }
 
@@ -514,7 +514,7 @@ struct llm_tokenizer_bpe {
                 index++;
                 symbols.emplace_back(sym);
             }
-            for (size_t i = 1; i < symbols.size(); ++i) {
+            for (size_t i = 1; i < static_cast<int>(symbols.size()); ++i) {
                 add_new_bigram(i - 1, i);
             }
 
@@ -555,10 +555,10 @@ struct llm_tokenizer_bpe {
                     sym.prev = final_prev_index;
                     sym.next = -1;
                     if (final_prev_index != -1) {
-                        symbols_final[final_prev_index].next = symbols_final.size();
+                        symbols_final[final_prev_index].next = static_cast<llm_symbol::index>(symbols_final.size());
                     }
                     symbols_final.emplace_back(sym);
-                    final_prev_index = symbols_final.size() - 1;
+                    final_prev_index = static_cast<int>(symbols_final.size()) - 1;
                 }
             }
         }
@@ -652,7 +652,7 @@ struct llm_tokenizer_wpm {
 
             // prepend phantom space
             const std::string word1 = "\xe2\x96\x81" + word;
-            const int n = word1.size();
+            const int n = static_cast<int>(word1.size());
 
             const size_t current_tokens = output.size();
 
@@ -1515,7 +1515,7 @@ int32_t llama_tokenize_impl(
         tokens[i] = res[i];
     }
 
-    return res.size();
+    return static_cast<int32_t>(res.size());
 }
 
 static std::string llama_decode_text(const std::string & text) {
