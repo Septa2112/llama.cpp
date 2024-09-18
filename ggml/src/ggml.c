@@ -428,6 +428,7 @@ static ggml_fp16_t ggml_table_gelu_quick_f16[1 << 16];
 
 // precomputed f32 table for f16 (256 KB) (ggml-impl.h)
 float ggml_table_f32_f16[1 << 16];
+// float ggml_table_f32_f16[1 << 16] __attribute__((aligned(32)));
 
 GGML_CALL const char * ggml_status_to_string(enum ggml_status status) {
     switch (status) {
@@ -12713,6 +12714,10 @@ static void ggml_compute_forward_mul_mat_one_chunk(
 
     const size_t src1_col_stride = src1_cont || src1->type != vec_dot_type ? row_size : nb11;
 
+    // 调整内存对齐 - 假设对齐到64字节
+    #define ALIGNMENT 16
+    uintptr_t src1_col_aligned;
+
     // attempt to reduce false-sharing (does not seem to make a difference)
     // 16 * 2, accounting for mmla kernels
     float tmp[32];
@@ -12742,6 +12747,18 @@ static void ggml_compute_forward_mul_mat_one_chunk(
                     (src1_cont || src1->type != vec_dot_type
                         ? (i11 + i12 * ne11 + i13 * ne12 * ne11) * row_size
                         : (i11 * nb11 + i12 * nb12 + i13 * nb13));
+                
+                src1_col_aligned = (uintptr_t)src1_col;
+                if (src1_col_aligned % ALIGNMENT != 0) {
+                    // 对齐处理
+                    src1_col_aligned = (src1_col_aligned + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
+                }
+
+                // 将对齐后的地址转换回指针
+                src1_col = (const char*)src1_col_aligned;
+
+                // assert(((uintptr_t)src1_col % 32) == 0);
+
                 float * dst_col = (float*)((char*)dst->data + (i1 * nb1 + i2 * nb2 + i3 * nb3));
 
                 //for (int64_t ir0 = iir0; ir0 < iir0 + blck_0 && ir0 < ir0_end; ++ir0) {
@@ -14246,7 +14263,7 @@ static void ggml_compute_forward_soft_max_f32(
 
 #ifndef NDEBUG
         for (int i = 0; i < nc; ++i) {
-            //printf("p[%d] = %f\n", i, p[i]);
+            printf("wp[%d] = %f\n", i, wp[i]);
             assert(!isnan(wp[i]));
         }
 #endif

@@ -619,6 +619,7 @@ extern float ggml_table_f32_f16[1 << 16];
 inline static float ggml_lookup_fp16_to_fp32(ggml_fp16_t f) {
     uint16_t s;
     memcpy(&s, &f, sizeof(uint16_t));
+    // uint16_t s = f;
     return ggml_table_f32_f16[s];
 }
 

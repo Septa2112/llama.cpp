@@ -5523,8 +5523,11 @@ void ggml_vec_dot_q8_0_q8_0(int n, float * restrict s, size_t bs, const void * r
     UNUSED(by);
     UNUSED(bs);
 
-    const block_q8_0 * restrict x = vx;
-    const block_q8_0 * restrict y = vy;
+    // assert(((uintptr_t)vx % 32) == 0);
+    // assert(((uintptr_t)vy % 32) == 0);
+
+    const block_q8_0 * restrict x = (const block_q8_0 * restrict) __builtin_assume_aligned(vx, 32);
+    const block_q8_0 * restrict y = (const block_q8_0 * restrict) __builtin_assume_aligned(vy, 32);
 
 #if defined(__ARM_FEATURE_MATMUL_INT8)
     if (nrc == 2) {
@@ -5745,8 +5748,8 @@ void ggml_vec_dot_q8_0_q8_0(int n, float * restrict s, size_t bs, const void * r
     for (; ib < nb; ++ib) {
         // Compute combined scale for the block
         const __m256 d = _mm256_set1_ps(GGML_FP16_TO_FP32(x[ib].d) * GGML_FP16_TO_FP32(y[ib].d));
-        __m256i qx = _mm256_loadu_si256((const __m256i *)x[ib].qs);
-        __m256i qy = _mm256_loadu_si256((const __m256i *)y[ib].qs);
+        __m256i qx = _mm256_load_si256((const __m256i *)x[ib].qs);
+        __m256i qy = _mm256_load_si256((const __m256i *)y[ib].qs);
 
         const __m256 q = mul_sum_i8_pairs_float(qx, qy);
 
