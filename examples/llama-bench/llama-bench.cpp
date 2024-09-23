@@ -917,6 +917,7 @@ struct test {
 
     std::vector<double> get_ts() const {
         int n_tokens = n_prompt + n_gen;
+        // printf("n_prompt: %d, n_gen: %d\n", n_prompt, n_gen);
         std::vector<double> ts;
         std::transform(samples_ns.begin(), samples_ns.end(), std::back_inserter(ts), [n_tokens](uint64_t t) { return 1e9 * n_tokens / t; });
         return ts;
@@ -1437,7 +1438,12 @@ static void test_prompt(llama_context * ctx, int n_prompt, int n_past, int n_bat
         for (int i = 1; i < n_tokens; i++) {
             tokens[i] = std::rand() % n_vocab;
         }
-        llama_decode(ctx, llama_batch_get_one(tokens.data(), n_tokens, n_past + n_processed, 0));
+        if (llama_model_has_encoder(model)) {
+            llama_encode(ctx, llama_batch_get_one(tokens.data(), n_tokens, n_past + n_processed, 0));
+        } else {
+            llama_decode(ctx, llama_batch_get_one(tokens.data(), n_tokens, n_past + n_processed, 0));
+        }
+        
         n_processed += n_tokens;
     }
 
@@ -1453,11 +1459,16 @@ static void test_gen(llama_context * ctx, int n_gen, int n_past, int n_threads) 
     llama_token token = llama_add_bos_token(model) ? llama_token_bos(model) : std::rand() % n_vocab;
 
     for (int i = 0; i < n_gen; i++) {
+        // llama_batch batch = llama_batch_get_one(&token, 1, n_past + i, 0);
+        // llama_encode(ctx, batch);
+        // llama_decode(ctx, batch);
         llama_decode(ctx, llama_batch_get_one(&token, 1, n_past + i, 0));
         llama_synchronize(ctx);
         token = std::rand() % n_vocab;
     }
 }
+static int test_gen_t5(){}
+
 
 static void llama_null_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
     (void) level;
@@ -1599,6 +1610,7 @@ int main(int argc, char ** argv) {
         }
 
         for (int i = 0; i < params.reps; i++) {
+            printf("reps: %d, n_prompt: %d, n_gen: %d\n", i, t.n_prompt, t.n_gen);
             llama_kv_cache_clear(ctx);
 
             uint64_t t_start = get_time_ns();
